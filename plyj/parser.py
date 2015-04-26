@@ -95,8 +95,12 @@ class MyLexer(object):
         t.lexer.lineno += len(t.value) / 2
 
     def t_error(self, t):
-        print("Illegal character '{}' ({}) in line {}".format(t.value[0], hex(ord(t.value[0])), t.lexer.lineno))
+        self.errors.append("Illegal character '{}' ({}) in line {}".format(
+            t.value[0], hex(ord(t.value[0])), t.lexer.lineno))
         t.lexer.skip(1)
+
+    def __init__(self):
+        self.errors = []
 
 class ExpressionParser(object):
 
@@ -1996,16 +2000,22 @@ class MyParser(ExpressionParser, NameParser, LiteralParser, TypeParser, ClassPar
         p[0] = p[2]
 
     def p_error(self, p):
-        print('error: {}'.format(p))
+        self.errors.append(str(p))
 
     def p_empty(self, p):
         '''empty :'''
 
+    def __init__(self):
+        self.errors = []
+
 class Parser(object):
 
     def __init__(self):
-        self.lexer = lex.lex(module=MyLexer(), optimize=1)
-        self.parser = yacc.yacc(module=MyParser(), start='goal', optimize=1)
+        self.lexer_module = MyLexer()
+        self.lexer = lex.lex(module=self.lexer_module, optimize=1)
+        self.parser_module = MyParser()
+        self.parser = yacc.yacc(module=self.parser_module, start='goal',
+                                optimize=1)
 
     def tokenize_string(self, code):
         self.lexer.input(code)
@@ -2035,6 +2045,9 @@ class Parser(object):
             _file = open(_file)
         content = _file.read()
         return self.parse_string(content, debug=debug)
+
+    def errors(self):
+        return self.lexer_module.errors + self.parser_module.errors
 
 if __name__ == '__main__':
     # for testing
